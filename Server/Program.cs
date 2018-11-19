@@ -30,7 +30,9 @@ namespace NetCodeAttempt
                 while (!(Console.KeyAvailable && Console.ReadKey(true).Key == ConsoleKey.Escape))
                 {
                 }
+                
                 client.Close();
+                client.Dispose();
             }
             catch (Exception ex)
             {
@@ -40,13 +42,17 @@ namespace NetCodeAttempt
 
         public static void ReceiveCallback(IAsyncResult ar)
         {
-            var u = (UdpClient)((UdpState)(ar.AsyncState)).client;
-            var e = (IPEndPoint)((UdpState)(ar.AsyncState)).endPoint;
+            var client = (UdpClient)((UdpState)(ar.AsyncState)).client;
+            var endPoint = (IPEndPoint)((UdpState)(ar.AsyncState)).endPoint;
+            var state = new UdpState();
+            state.endPoint = endPoint;
+            state.client = client;
 
-            var receiveBytes = u.EndReceive(ar, ref e);
+            var receiveBytes = client.EndReceive(ar, ref endPoint);
             var receiveString = Encoding.ASCII.GetString(receiveBytes);
 
             Console.WriteLine("Received: {0}", receiveString);
+            client.BeginReceive(new AsyncCallback(ReceiveCallback), state);
         }
     }
 }

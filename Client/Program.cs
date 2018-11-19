@@ -24,6 +24,7 @@ namespace NetCodeAttempt
                     Console.WriteLine("Sent Message.");
                 }
                 client.Close();
+                client.Dispose();
             }
             catch (Exception ex)
             {
