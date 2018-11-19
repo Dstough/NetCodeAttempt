@@ -19,6 +19,7 @@ namespace NetCodeAttempt
                     {
                         case ConsoleKey.A:
                             
+                            break;
                         default:break;
                     }
                 }
