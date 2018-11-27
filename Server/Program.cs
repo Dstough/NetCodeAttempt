@@ -2,42 +2,31 @@
 using System.Text;
 using System.Net;
 using System.Net.Sockets;
+using System.Collections.Generic;
 namespace NetCodeAttempt
 {
     public class Program
     {
-        public struct UdpState
-        {
-            public UdpState(UdpClient _client, IPEndPoint _endPoint)
-            {
-                client = _client;
-                endPoint = _endPoint;
-            }
-            public UdpClient client;
-            public IPEndPoint endPoint;
-        }
+        public static List<ClientConnection> clients { get; set; }
+
         static void Main(string[] args)
         {
+            var serverConnetionPort = 20000;
+            var endPoint = new IPEndPoint(IPAddress.Any, serverConnetionPort);
+            var client = new UdpClient(endPoint);
+            var state = new UdpState
+            (
+                new UdpClient(endPoint),
+                new IPEndPoint(IPAddress.Any, serverConnetionPort)
+            );
+
             try
             {
-                var serverPort = 20000;
-                var state = new UdpState
-                (
-                    new IPEndPoint(IPAddress.Any, serverPort),
-                    new UdpClient(endPoint)
-                );
-                state.endPoint = endPoint;
-                state.client = client;
-
-                client.BeginReceive(new AsyncCallback(ReceiveCallback), state);
-
-                Console.WriteLine("Press ESC to stop");
+                client.BeginReceive(new AsyncCallback(ReceiveConnectRequest), state);
+                Console.WriteLine("Press ESC to stop the server");
                 while (!(Console.KeyAvailable && Console.ReadKey(true).Key == ConsoleKey.Escape))
                 {
                 }
-
-                client.Close();
-
             }
             catch (Exception ex)
             {
@@ -45,25 +34,31 @@ namespace NetCodeAttempt
             }
             finally
             {
+                client.Close();
                 client.Dispose();
             }
         }
 
-        public static void ReceiveCallback(IAsyncResult ar)
+        public static void ReceiveConnectRequest(IAsyncResult ar)
         {
+            var client = (UdpClient)((UdpState)(ar.AsyncState)).client;
+            var endPoint = (IPEndPoint)((UdpState)(ar.AsyncState)).endPoint;
             var state = new UdpState
             (
                 (UdpClient)((UdpState)(ar.AsyncState)).client,
                 (IPEndPoint)((UdpState)(ar.AsyncState)).endPoint
             );
-            state.endPoint = endPoint;
-            state.client = client;
 
             var receiveBytes = client.EndReceive(ar, ref endPoint);
             var receiveString = Encoding.ASCII.GetString(receiveBytes);
 
-            Console.WriteLine("Received: {0}", receiveString);
-            client.BeginReceive(new AsyncCallback(ReceiveCallback), state);
+            if (receiveString == "connect")
+            {
+                Console.WriteLine("Client Connected.");
+                clients.Add(new ClientConnection(client, endPoint));
+            }
+
+            client.BeginReceive(new AsyncCallback(ReceiveConnectRequest), state);
         }
     }
 }
