@@ -6,31 +6,70 @@ namespace NetCodeAttempt
 {
     public class Program
     {
+        const int serverPort = 20000;
+        const int clientPort = 20001;
+        
+        const string connectRequest = "connect";
+        const string disconnectMessage = "disconnect";
+        const string message = "Hello World";
+
         static void Main(string[] args)
         {
+            var serverAddress = "localhost";
+            var myEndPoint = new IPEndPoint(IPAddress.Any, clientPort);
+            var client = new UdpClient(myEndPoint);
+
             try
             {
-                var message = "Hello World";
-                var hostName = "localhost";
-                var hostConnectPort = 20000;
-                var hostMessagePort = 20001;
-                var client = new UdpClient();
-
-                client.Connect(hostName, hostConnectPort);
-
                 Console.WriteLine("Press ESC to stop");
-                while (Console.ReadKey(true).Key != ConsoleKey.Escape)
+                while (true)
                 {
-                    client.Send(Encoding.ASCII.GetBytes(message), message.Length);
-                    Console.WriteLine("Sent Message.");
+                    var key = Console.ReadKey(true).Key;
+                    if (key == ConsoleKey.Escape)
+                    {
+                        break;
+                    }
+                    else if (key == ConsoleKey.C)
+                    {
+                        client.Send(Encoding.ASCII.GetBytes(connectRequest), connectRequest.Length, serverAddress, serverPort);
+                        client.BeginReceive(new AsyncCallback(ReceiveMessage), new UdpState(client, myEndPoint));
+                    }
+                    else if (key == ConsoleKey.M)
+                    {
+                        client.Send(Encoding.ASCII.GetBytes(message), message.Length, serverAddress, serverPort);
+                    }
+                    else if (key == ConsoleKey.X)
+                    {
+                        client.Send(Encoding.ASCII.GetBytes(disconnectMessage), disconnectMessage.Length, serverAddress, serverPort);
+                    }
                 }
-                client.Close();
-                client.Dispose();
             }
             catch (Exception ex)
             {
-                Console.WriteLine(ex.Message);
+                Console.WriteLine(ex.ToString());
             }
+            finally
+            {
+                client.Close();
+                client.Dispose();
+            }
+        }
+
+        public static void ReceiveMessage(IAsyncResult ar)
+        {
+            var client = (UdpClient)((UdpState)(ar.AsyncState)).client;
+            var endPoint = (IPEndPoint)((UdpState)(ar.AsyncState)).endPoint;
+            var state = new UdpState
+            (
+                (UdpClient)((UdpState)(ar.AsyncState)).client,
+                (IPEndPoint)((UdpState)(ar.AsyncState)).endPoint
+            );
+
+            var receiveBytes = client.EndReceive(ar, ref endPoint);
+            var receiveString = Encoding.ASCII.GetString(receiveBytes);
+
+            Console.WriteLine("Server Says: " + receiveString);
+            client.BeginReceive(new AsyncCallback(ReceiveMessage), state);
         }
     }
 }
