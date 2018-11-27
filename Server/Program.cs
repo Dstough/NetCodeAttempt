@@ -6,9 +6,13 @@ namespace NetCodeAttempt
 {
     public class Program
     {
-
         public struct UdpState
         {
+            public UdpState(UdpClient _client, IPEndPoint _endPoint)
+            {
+                client = _client;
+                endPoint = _endPoint;
+            }
             public UdpClient client;
             public IPEndPoint endPoint;
         }
@@ -17,10 +21,11 @@ namespace NetCodeAttempt
             try
             {
                 var serverPort = 20000;
-
-                var endPoint = new IPEndPoint(IPAddress.Any, serverPort);
-                var client = new UdpClient(endPoint);
-                var state = new UdpState();
+                var state = new UdpState
+                (
+                    new IPEndPoint(IPAddress.Any, serverPort),
+                    new UdpClient(endPoint)
+                );
                 state.endPoint = endPoint;
                 state.client = client;
 
@@ -30,21 +35,27 @@ namespace NetCodeAttempt
                 while (!(Console.KeyAvailable && Console.ReadKey(true).Key == ConsoleKey.Escape))
                 {
                 }
-                
+
                 client.Close();
-                client.Dispose();
+
             }
             catch (Exception ex)
             {
                 Console.WriteLine(ex.Message);
             }
+            finally
+            {
+                client.Dispose();
+            }
         }
 
         public static void ReceiveCallback(IAsyncResult ar)
         {
-            var client = (UdpClient)((UdpState)(ar.AsyncState)).client;
-            var endPoint = (IPEndPoint)((UdpState)(ar.AsyncState)).endPoint;
-            var state = new UdpState();
+            var state = new UdpState
+            (
+                (UdpClient)((UdpState)(ar.AsyncState)).client,
+                (IPEndPoint)((UdpState)(ar.AsyncState)).endPoint
+            );
             state.endPoint = endPoint;
             state.client = client;
 
